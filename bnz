@@ -1,4 +1,4 @@
-local LibraryURL = "https://raw.githubusercontent.com/nyloxdubrazil-blip/dd/refs/heads/main/bnz"
+local LibraryURL = "https://raw.githubusercontent.com/nyloxdubrazil-blip/dd/refs/heads/main/library"
 
 
 if not Susano or type(Susano) ~= "table" or type(Susano.HttpGet) ~= "function" then
