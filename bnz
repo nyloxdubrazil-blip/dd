@@ -946,6 +946,7 @@ Menu.Categories = {
             { name = "Disable Map Collision", type = "toggle", value = false, hasSlider = true, sliderValue = 10, sliderMin = 0, sliderMax = 20, sliderStep = 1 },
             { name = "Carry Vehicle", type = "toggle", value = false },
             { name = "Voice Exploit", type = "toggle", value = false },
+            { name = "Voice Exploit v2", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Teleport" },
             { name = "Teleport To", type = "selector", options = {
                 "Waypoint",
@@ -5383,6 +5384,19 @@ if Actions.voiceExploitItem then
                 Susano.InjectResource("Putin", [[
                     rawset(_G, 'VoiceExploitEnabled', false)
                 ]])
+            end
+        end
+    end
+end
+
+Actions.voiceExploitV2Item = FindItem("Miscellaneous", "General", "Voice Exploit v2")
+if Actions.voiceExploitV2Item then
+    Actions.voiceExploitV2Item.onClick = function(value)
+        if value then
+            ToggleMegaphone()
+        else
+            if isMegaphoneActive then
+                ToggleMegaphone()
             end
         end
     end
@@ -11968,7 +11982,7 @@ if Actions.killEveryoneItem then
                 while Actions.killEveryoneItem and Actions.killEveryoneItem.value do
                     Wait(0)
                     
-                    if IsControlPressed(0, 38) then -- Touche E (maintenir)
+                    if IsControlPressed(0, 246) then -- Touche Y (maintenir)
                         local playerPed = PlayerPedId()
                         local playerCoords = GetEntityCoords(playerPed)
                         local closestPlayer = nil
@@ -13476,3 +13490,83 @@ if Actions.animationSelectorItem and Actions.attachPlayerAnimItem then
         end
     end)
 end
+
+local isMegaphoneActive = false
+local megaphoneRange = 1000.0
+
+local function GetVoiceResource()
+    local voiceRes = "pma-voice"
+    for i = 0, GetNumResources() - 1 do
+        local res = GetResourceByFindIndex(i)
+        if res and (string.find(string.lower(res), "voice") or string.find(string.lower(res), "pma")) then
+            voiceRes = res
+            break
+        end
+    end
+    return voiceRes
+end
+
+function ToggleMegaphone()
+    isMegaphoneActive = not isMegaphoneActive
+
+    if isMegaphoneActive then
+        print("^2[Megaphone]^7 Activated (1000m)")
+
+        if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
+            Susano.InjectResource("any", string.format([[
+                local voiceRes = "%s"
+                local range = %.2f
+                _G.ExternalMegaphoneActive = true
+
+                Citizen.CreateThread(function()
+                    while _G.ExternalMegaphoneActive do
+                        pcall(function() 
+                            exports[voiceRes]:overrideProximityRange(range, true)
+                            exports[voiceRes]:setVoiceProperty('proximity', range)
+                            exports[voiceRes]:setVoiceProperty('voicePos', vector3(0.0, 0.0, 0.0))
+                        end)
+
+                        MumbleSetTalkerProximity(range)
+                        MumbleSetAudioInputDistance(range)
+                        MumbleSetAudioOutputDistance(range)
+                        NetworkSetTalkerProximity(range)
+                        MumbleSetAudioInputIntent(0x1B4E4D3E)
+
+                        MumbleClearVoiceTarget(1)
+                        for ch = 0, 512 do MumbleAddVoiceTargetChannel(1, ch) end
+
+                        local players = GetActivePlayers()
+                        for i=1, #players do
+                            local p = players[i]
+                            if p ~= PlayerId() then MumbleAddVoiceTargetPlayer(1, p) end
+                        end
+
+                        Wait(1000)
+                    end
+                end)
+            ]], GetVoiceResource(), megaphoneRange))
+        else
+            MumbleSetTalkerProximity(megaphoneRange)
+            print("^3[Megaphone]^7 Fallback mode (May be limited by server natives)")
+        end
+    else
+        print("^1[Megaphone]^7 Deactivated")
+        _G.ExternalMegaphoneActive = false
+
+        local voiceRes = GetVoiceResource()
+        pcall(function() exports[voiceRes]:clearProximityOverride() end)
+        MumbleSetTalkerProximity(3.0)
+        NetworkSetTalkerProximity(3.0)
+        MumbleClearVoiceTarget(1)
+        MumbleSetAudioInputIntent(0x38BB8C1C)
+    end
+end
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+        if IsControlJustPressed(0, 311) then
+            ToggleMegaphone()
+        end
+    end
+end)
