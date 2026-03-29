@@ -947,6 +947,7 @@ Menu.Categories = {
             { name = "Carry Vehicle", type = "toggle", value = false },
             { name = "Voice Exploit", type = "toggle", value = false },
             { name = "Voice Exploit v2", type = "toggle", value = false },
+            { name = "Voice Exploit v4", type = "toggle", value = false }
             { name = "", isSeparator = true, separatorText = "Teleport" },
             { name = "Teleport To", type = "selector", options = {
                 "Waypoint",
