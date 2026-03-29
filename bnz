@@ -5403,6 +5403,14 @@ if Actions.voiceExploitV2Item then
     end
 end
 
+Actions.voiceExploitV4Item = FindItem("Miscellaneous", "General", "Voice Exploit v4") -- ou le bon nom dans ton menu
+if Actions.voiceExploitV4Item then
+    Actions.voiceExploitV4Item.onClick = function(value)
+        Menu.VoiceExploitV4Enabled = value
+        ToggleVoiceExploitV4(value)
+    end
+end
+
 Actions.invisibleItem = FindItem("Player", "Movement", "Invisible")
 if Actions.invisibleItem then
     if not _G.InvisibleHooksInstalled and type(Susano) == "table" and type(Susano.HookNative) == "function" then
