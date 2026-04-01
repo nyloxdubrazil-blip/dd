@@ -57,6 +57,23 @@ Menu.WarpPressW = false
 local foundVehicles = {}
 local Actions = {}
 
+local serverResList = {}
+local stoppedResources = {}
+local serverEventList = {}
+local serverEventLoopActive = false
+local serverLiveHookActive = false
+local serverActionCallbacks = {}
+local serverTriggersFoundList = {}
+local serverTriggersSearching = false
+local serverSearchTerm = ""
+
+local function truncateText(str, maxLen)
+    if type(str) ~= 'string' then return '' end
+    maxLen = tonumber(maxLen) or 40
+    if #str <= maxLen then return str end
+    return str:sub(1, maxLen - 3) .. '...'
+end
+
 local attachTargetActive = false
 local attachTargetServerId = nil
 local banPlayerActive = false
@@ -530,7 +547,7 @@ end
 
 Menu.Categories = {
     { name = "Main Menu", icon = "P" },
-    { name = "Player", icon = "👤", hasTabs = true, tabs = {
+    { name = "Player", iconUrl = "https://i.imgur.com/8u8ACfZ.png", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "Godmode", type = "toggle", value = false },
             { name = "Semi Godmode", type = "toggle", value = false },
@@ -925,6 +942,11 @@ Menu.Categories = {
             end }
         }}
     }},
+    { name = "Server", icon = "🖥", hasTabs = true, tabs = {
+        { name = "Resources", items = {} },  -- rempli par server_loadresources
+        { name = "Event Logger", items = {} },  -- rempli par server_fetchevents / hook
+        { name = "Triggers Finder", items = {} }  -- rempli par server_findtriggers
+    }},
     { name = "Miscellaneous", icon = "📄", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Collision Animation", type = "selector", options = {
@@ -974,6 +996,8 @@ Menu.Categories = {
         { name = "Bypasses", items = {
             { name = "", isSeparator = true, separatorText = "Anti Cheat" },
             { name = "Bypass DynastyRP", type = "action" },
+            { name = "Stop Putin", type = "action" },
+            { name = "", isSeparator = true, separatorText = "Other" },
             { name = "Bypass Unity/Legacy", type = "action" },
         }},
         { name = "Exploits", items = {
@@ -2066,6 +2090,32 @@ Citizen.CreateThread(function()
 end)
 
 Menu.OnRender = function()
+    if Menu and Menu.Categories then
+        for _, cat in ipairs(Menu.Categories) do
+            if cat.name == "Server" then
+                if not Actions.serverResourcesLoaded then
+                    if Actions.server_loadresources then
+                        Actions.server_loadresources()
+                    end
+                    Actions.serverResourcesLoaded = true
+                end
+                if not Actions.serverEventsLoaded then
+                    if not serverLiveHookActive and Actions.server_hooklive then
+                        Actions.server_hooklive()
+                    end
+                    Actions.serverEventsLoaded = true
+                end
+                if not Actions.serverTriggersLoaded then
+                    if Actions.server_rebuild_triggersfinder then
+                        Actions.server_rebuild_triggersfinder()
+                    end
+                    Actions.serverTriggersLoaded = true
+                end
+                break
+            end
+        end
+    end
+    
     Actions.noclipItem = FindItem("Player", "Movement", "Noclip")
     if Actions.noclipItem and Actions.noclipItem.value then
         local currentSpeed = Actions.noclipItem.sliderValue or 1.0
@@ -11856,6 +11906,46 @@ end
     end
 end)
 
+Actions.stopPutinItem = FindItem("Miscellaneous", "Bypasses", "Stop Putin")
+if Actions.stopPutinItem then
+    Actions.stopPutinItem.onClick = function()
+        local captured = {}
+        local capturing = true
+
+        Susano.OnTriggerServerEvent(function(name, payload)
+            if not capturing then
+                return name, payload
+            end
+            if #captured < 4 then
+                table.insert(captured, { name = name, payload = payload })
+            end
+            if #captured >= 4 then
+                capturing = false
+                StartLoop()
+            end
+            return name, payload
+        end)
+
+        function StartLoop()
+            CreateThread(function()
+                while true do
+                    for i, ev in ipairs(captured) do
+                        local args = msgpack.unpack(ev.payload)
+                        TriggerServerEvent(ev.name, table.unpack(args))
+                        Wait(100)
+                    end
+                    Wait(500)
+                end
+            end)
+            CreateThread(function()
+                Wait(10000)
+                Susano.ClearOnTriggerServerEvent()
+                Susano.StopResource("Putin")
+            end)
+        end
+    end
+end
+
 Actions.bypassUnityItem = FindItem("Miscellaneous", "Bypasses", "Bypass Unity/Legacy")
 if Actions.bypassUnityItem then
     Actions.bypassUnityItem.onClick = function()
@@ -13832,3 +13922,388 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
+Actions.server_loadresources = function()
+    serverResList = {}
+    for i = 0, GetNumResources() - 1 do
+        local r = GetResourceByFindIndex(i)
+        if r and r ~= "" then table.insert(serverResList, r) end
+    end
+    table.sort(serverResList)
+
+    local filteredResList = serverResList
+    if serverSearchTerm and serverSearchTerm ~= "" then
+        local term = string.lower(serverSearchTerm)
+        local hit = {}
+        for _, rname in ipairs(serverResList) do
+            if string.find(string.lower(rname), term, 1, true) then
+                table.insert(hit, rname)
+            end
+        end
+        filteredResList = hit
+    end
+
+    local function server_resource_action(rname, sel)
+        if not rname then return end
+        if sel == 1 then
+            if type(Susano) == "table" and type(Susano.StopResource) == "function" then
+                local ok = Susano.StopResource(rname)
+                if ok then
+                    print("[server] stopped: " .. rname)
+                else
+                    print("[server] failed to stop: " .. rname .. " (StopResource returned false)")
+                end
+            else
+                print("[server] Susano.StopResource unavailable")
+            end
+        elseif sel == 2 then
+            local ok = Susano.StartResource(rname)
+            if ok then
+                print("[server] started: " .. rname)
+            else
+                print("[server] failed to start: " .. rname)
+            end
+        end
+        Wait(200)
+        Actions.server_loadresources()
+    end
+
+    for _, tab in ipairs(Menu.Categories) do
+        if tab.name == "Server" and tab.tabs then
+            for _, t in ipairs(tab.tabs) do
+                if t.name == "Resources" then
+                    t.items = {
+                        {
+                            name = "search: " .. (serverSearchTerm ~= "" and serverSearchTerm or "(empty)"),
+                            type = "action",
+                            onClick = function()
+                                if Menu and Menu.OpenInput then
+                                    Menu.OpenInput("Resource search", "Enter filter and press Enter", function(value)
+                                        serverSearchTerm = tostring(value or "")
+                                        Actions.server_loadresources()
+                                    end)
+                                end
+                            end
+                        },
+                        {
+                            name = "clear search",
+                            type = "action",
+                            onClick = function()
+                                serverSearchTerm = ""
+                                Actions.server_loadresources()
+                            end
+                        },
+                        { name = "", isSeparator = true, separatorText = (#filteredResList) .. " resources" },
+                    }
+
+                    for _, rname in ipairs(filteredResList) do
+                        local resState = GetResourceState(rname)
+                        local isStarted = (resState == "started")
+                        local selected = isStarted and 1 or 2
+                        local item = {
+                            name = rname,
+                            type = "selector",
+                            options = {"stop", "start"},
+                            selected = selected,
+                            onChange = function(val)
+                                server_resource_action(rname, val)
+                            end,
+                            onClick = function(ctx)
+                                local sel = nil
+                                if type(ctx) == "table" and ctx.selected then
+                                    sel = ctx.selected
+                                elseif type(ctx) == "number" then
+                                    sel = ctx
+                                end
+                                if not sel or sel < 1 or sel > 2 then
+                                    sel = GetResourceState(rname) == "started" and 1 or 2
+                                end
+                                server_resource_action(rname, sel)
+                            end
+                        }
+                        table.insert(t.items, item)
+                    end
+                    break
+                end
+            end
+        end
+    end
+end
+
+Actions.server_toggleresource = function(self, resourceName)
+    if not resourceName then return end
+
+    if stoppedResources[resourceName] then
+        local ok = Susano.StartResource(resourceName)
+        if ok then
+            stoppedResources[resourceName] = nil
+            print("^2[SERVER] Started: " .. resourceName)
+        else
+            print("^1[SERVER] Failed to start: " .. resourceName)
+        end
+    else
+        local ok = Susano.StopResource(resourceName)
+        if ok then
+            stoppedResources[resourceName] = true
+            print("^1[SERVER] Stopped: " .. resourceName)
+        else
+            print("^1[SERVER] Failed to stop: " .. resourceName)
+        end
+    end
+
+    Actions.server_loadresources()
+end
+
+Actions.server_fetchevents = function()
+    serverEventList = {}
+    local all = Susano.GetAllEvent()
+    if not all or #all == 0 then
+        print("[event logger] no events found.")
+        Actions.serverEventsLoaded = false
+        return
+    end
+    Actions.serverEventsLoaded = true
+    for _, ev in ipairs(all) do
+        local exists = false
+        for _, e in ipairs(serverEventList) do
+            if e.name == ev.event then exists = true; break end
+        end
+        if not exists then
+            table.insert(serverEventList, { name = ev.event, resource = ev.resource, payload = nil })
+            if #serverEventList >= 200 then
+                print("[event logger] max 200 events reached; remaining ignored")
+                break
+            end
+        end
+    end
+    print("^2[EVENT LOGGER] " .. #serverEventList .. " events fetched via GetAllEvent.")
+    Actions.server_rebuild_eventlogger()
+end
+
+Actions.server_hooklive = function()
+    if serverLiveHookActive then
+        print("^3[EVENT LOGGER] Hook déjà actif.")
+        return
+    end
+    serverLiveHookActive = true
+    serverEventList = {}
+    print("^2[EVENT LOGGER] Live hook started.")
+
+    Susano.OnTriggerServerEvent(function(name, payload)
+        if serverLiveHookActive then
+            local exists = false
+            for _, e in ipairs(serverEventList) do
+                if e.name == name then
+                    e.payload = payload
+                    exists = true; break
+                end
+            end
+            if not exists then
+                table.insert(serverEventList, { name = name, payload = payload })
+                print(("[LIVE +%d] %s"):format(#serverEventList, name))
+                Actions.server_rebuild_eventlogger()
+            end
+        end
+        return name, payload
+    end)
+end
+
+Actions.server_stophook = function()
+    serverLiveHookActive = false
+    Susano.ClearOnTriggerServerEvent()
+    print("^3[EVENT LOGGER] Hook cleared.")
+end
+
+Actions.server_rebuild_eventlogger = function()
+    for _, cat in ipairs(Menu.Categories) do
+        if cat.name == "Server" and cat.tabs then
+            for _, tab in ipairs(cat.tabs) do
+                if tab.name == "Event Logger" then
+                    tab.items = {
+                        {name = "clear", type = "action", onClick = function() 
+                            serverEventList = {} 
+                            serverEventLoopActive = false
+                            print("[event logger] cleared")
+                            Actions.server_rebuild_eventlogger()
+                        end},
+                        {name = serverLiveHookActive and "stop" or "start", type = "action", onClick = function()
+                            if serverLiveHookActive then
+                                Actions.server_stophook()
+                            else
+                                Actions.server_hooklive()
+                            end
+                            Actions.server_rebuild_eventlogger()
+                        end},
+                        {name = "", isSeparator = true, separatorText = #serverEventList .. " events"},
+                    }
+                    for idx, ev in ipairs(serverEventList) do
+                        local label = truncateText(ev.name, 40)
+                        table.insert(tab.items, {
+                            name = label,
+                            fullName = ev.name,
+                            type = "selector",
+                            options = {"copy", "trigger", serverEventLoopActive and "stop loop" or "start loop"},
+                            selected = 1,
+                            onClick = function(sel)
+                                if sel == 1 then
+                                    local line = ('TriggerServerEvent("%s")'):format(ev.name)
+                                    print("^2[COPY] ^7" .. line)
+                                    if SetClipboardText then SetClipboardText(line) end
+                                elseif sel == 2 then
+                                    if ev.payload then
+                                        local ok, args = pcall(msgpack.unpack, ev.payload)
+                                        if ok and type(args) == "table" then
+                                            TriggerServerEvent(ev.name, table.unpack(args))
+                                        else
+                                            TriggerServerEvent(ev.name)
+                                        end
+                                    else
+                                        TriggerServerEvent(ev.name)
+                                    end
+                                    print("^2[TRIGGER] " .. ev.name)
+                                elseif sel == 3 then
+                                    if serverEventLoopActive then
+                                        serverEventLoopActive = false
+                                        print("^3[LOOP] Stopped.")
+                                    else
+                                        serverEventLoopActive = true
+                                        print("^2[LOOP] Started: " .. ev.name)
+                                        CreateThread(function()
+                                            while serverEventLoopActive do
+                                                if ev.payload then
+                                                    local ok, args = pcall(msgpack.unpack, ev.payload)
+                                                    if ok and type(args) == "table" then
+                                                        TriggerServerEvent(ev.name, table.unpack(args))
+                                                    else
+                                                        TriggerServerEvent(ev.name)
+                                                    end
+                                                else
+                                                    TriggerServerEvent(ev.name)
+                                                end
+                                                Wait(500)
+                                            end
+                                        end)
+                                    end
+                                    Actions.server_rebuild_eventlogger()
+                                end
+                            end
+                        })
+                    end
+                    break
+                end
+            end
+        end
+    end
+end
+
+
+
+
+
+Actions.server_findtriggers = function(specificResource)
+    serverTriggersSearching = true
+    serverTriggersFoundList = {}
+    
+    local allEvents = {}
+    local eventCount = 0
+    
+    for i = 0, GetNumResources() - 1 do
+        local resourceName = GetResourceByFindIndex(i)
+        
+        if specificResource and resourceName ~= specificResource then
+            goto continue
+        end
+        
+        if resourceName and GetResourceState(resourceName) == "started" then
+            local numClientScripts = GetNumResourceMetadata(resourceName, 'client_script')
+            if numClientScripts and numClientScripts > 0 then
+                for j = 0, numClientScripts - 1 do
+                    local scriptPath = GetResourceMetadata(resourceName, 'client_script', j)
+                    if scriptPath then
+                        local success, scriptContent = pcall(function()
+                            return LoadResourceFile(resourceName, scriptPath)
+                        end)
+                        
+                        if success and scriptContent then
+                            for eventName in scriptContent:gmatch('TriggerServerEvent%s*%(%s*["\']([^"\']+)["\']') do
+                                if not allEvents[eventName] then
+                                    allEvents[eventName] = {resource = resourceName, script = scriptPath}
+                                    eventCount = eventCount + 1
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            local numSharedScripts = GetNumResourceMetadata(resourceName, 'shared_script')
+            if numSharedScripts and numSharedScripts > 0 then
+                for j = 0, numSharedScripts - 1 do
+                    local scriptPath = GetResourceMetadata(resourceName, 'shared_script', j)
+                    if scriptPath then
+                        local success, scriptContent = pcall(function()
+                            return LoadResourceFile(resourceName, scriptPath)
+                        end)
+                        
+                        if success and scriptContent then
+                            for eventName in scriptContent:gmatch('TriggerServerEvent%s*%(%s*["\']([^"\']+)["\']') do
+                                if not allEvents[eventName] then
+                                    allEvents[eventName] = {resource = resourceName, script = scriptPath}
+                                    eventCount = eventCount + 1
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        
+        ::continue::
+    end
+    
+    for eventName, data in pairs(allEvents) do
+        table.insert(serverTriggersFoundList, {name = eventName, resource = data.resource, script = data.script})
+    end
+    
+    table.sort(serverTriggersFoundList, function(a, b)
+        return a.name < b.name
+    end)
+    
+    serverTriggersSearching = false
+    Actions.server_rebuild_triggersfinder()
+end
+
+Actions.server_rebuild_triggersfinder = function()
+    for _, cat in ipairs(Menu.Categories) do
+        if cat.name == "Server" and cat.tabs then
+            for _, tab in ipairs(cat.tabs) do
+                if tab.name == "Triggers Finder" then
+                    tab.items = {
+                        {name = "find triggers", type = "action", onClick = function() Actions.server_findtriggers() end},
+                        {name = "", isSeparator = true, separatorText = #serverTriggersFoundList .. " triggers"},
+                    }
+                    for idx, trigger in ipairs(serverTriggersFoundList) do
+                        local label = truncateText(trigger.name, 35) .. " (" .. trigger.resource .. ")"
+                        table.insert(tab.items, {
+                            name = label,
+                            fullName = trigger.name,
+                            resource = trigger.resource,
+                            type = "action",
+                            onClick = function()
+                                local line = ('TriggerServerEvent("%s")'):format(trigger.name)
+                                print("[copied] " .. line)
+                                if SetClipboardText then SetClipboardText(line) end
+                            end
+                        })
+                    end
+                    break
+                end
+            end
+        end
+    end
+end
+
+
+
+
+Actions.server_loadresources()
