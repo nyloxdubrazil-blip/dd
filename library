@@ -1963,6 +1963,14 @@ function Menu.DrawBackground()
     else
         Menu.DrawTopRoundedRect(x, startY, width + 1, topHeight, 0, 0, 0, 255, topRadius)
     end
+
+    local itemsY = startY + headerH + menuBarH + spacing
+    local itemsH = 0
+    if Menu.OpenedCategory then
+        local category = Menu.Categories[Menu.OpenedCategory]
+        if category and category.hasTabs and category.tabs then
+            local currentTab = category.tabs[Menu.CurrentTab]
+            if currentTab and currentTab.items then
                 local maxVisible = Menu.ItemsPerPage
                 local totalItems = #currentTab.items
                 local visibleItems = math.min(maxVisible, totalItems)
@@ -1970,14 +1978,12 @@ function Menu.DrawBackground()
             end
         end
     else
-        itemsY = startY + headerH + menuBarH + spacing
-        
         local maxVisible = Menu.ItemsPerPage
         local totalCategories = #Menu.Categories - 1
         local visibleCategories = math.min(maxVisible, totalCategories)
         itemsH = visibleCategories * itemH
     end
-    
+
     local itemsEndY = itemsY + itemsH
     
     -- Calculer la position de la barre Main Menu
