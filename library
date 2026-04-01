@@ -1387,7 +1387,14 @@ function Menu.DrawCategories()
 
             local textX = x + 16
             local textY = itemY + itemHeight / 2 - 8
-            Menu.DrawText(textX, textY, category.name, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
+            local prefix = ""
+            if category and category.icon and category.icon ~= "" then
+                prefix = category.icon .. " "
+            elseif category and category.emoji and category.emoji ~= "" then
+                prefix = category.emoji .. " "
+            end
+            local label = prefix .. (category.name or "")
+            Menu.DrawText(textX, textY, label, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
             local chevronX = x + width - 22
             Menu.DrawText(chevronX, textY, ">", 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
@@ -1947,17 +1954,15 @@ function Menu.DrawBackground()
     local menuBarH = scaledPos.mainMenuHeight
     local spacing = scaledPos.mainMenuSpacing
     local itemH = scaledPos.itemHeight
-    
-    local itemsY = 0
-    local itemsH = 0
-    
-    if Menu.OpenedCategory then
-        itemsY = startY + headerH + menuBarH + spacing
-        
-        local category = Menu.Categories[Menu.OpenedCategory]
-        if category and category.hasTabs and category.tabs then
-            local currentTab = category.tabs[Menu.CurrentTab]
-            if currentTab and currentTab.items then
+
+    -- Coins supérieurs arrondis (gauche + droite)
+    local topRadius = 10
+    local topHeight = headerH + menuBarH
+    if Susano and Susano.DrawRectFilled then
+        Susano.DrawRectFilled(x, startY, width + 1, topHeight, 0.0, 0.0, 0.0, 1.0, topRadius)
+    else
+        Menu.DrawTopRoundedRect(x, startY, width + 1, topHeight, 0, 0, 0, 255, topRadius)
+    end
                 local maxVisible = Menu.ItemsPerPage
                 local totalItems = #currentTab.items
                 local visibleItems = math.min(maxVisible, totalItems)
