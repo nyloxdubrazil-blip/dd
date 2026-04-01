@@ -1385,15 +1385,65 @@ function Menu.DrawCategories()
                 Menu.DrawRect(selectorX, drawY, 3, itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
             end
 
-            local textX = x + 16
-            local textY = itemY + itemHeight / 2 - 8
-            local prefix = ""
-            if category and category.icon and category.icon ~= "" then
-                prefix = category.icon .. " "
-            elseif category and category.emoji and category.emoji ~= "" then
-                prefix = category.emoji .. " "
+            -- Boîte d'icône
+            local iconPad = 4 * scale
+            local iconBoxSize = itemHeight - (iconPad * 2)
+            local iconBoxX = x + iconPad + (2 * scale)
+            local iconBoxY = itemY + iconPad
+            local iconRadius = 4 * scale
+
+            if category.iconUrl then
+                -- Charger la texture si pas encore fait
+                if not category._iconTexture and not category._iconLoading then
+                    category._iconLoading = true
+                    CreateThread(function()
+                        local ok, result = pcall(function()
+                            local status, body = Susano.HttpGet(category.iconUrl)
+                            if status == 200 and body and #body > 0 then
+                                local tex, w, h = Susano.LoadTextureFromBuffer(body)
+                                if tex and tex ~= 0 then
+                                    category._iconTexture = tex
+                                end
+                            end
+                        end)
+                        category._iconLoading = false
+                    end)
+                end
+                -- Dessiner l'image sans fond
+                if category._iconTexture and category._iconTexture > 0 and Susano and Susano.DrawImage then
+                    Susano.DrawImage(category._iconTexture, iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, 1.0, 1.0, 1.0, 1.0, 0)
+                end
+            else
+                -- Fond coloré + texte/emoji
+                local iconR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 0.58
+                local iconG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
+                local iconB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 0.83
+
+                if Susano and Susano.DrawRectFilled then
+                    Susano.DrawRectFilled(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, iconR, iconG, iconB, 1.0, iconRadius)
+                else
+                    Menu.DrawRoundedRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize,
+                        math.floor(iconR*255), math.floor(iconG*255), math.floor(iconB*255), 255, iconRadius)
+                end
+
+                local iconChar = (category and category.icon and category.icon ~= "" and category.icon)
+                              or (category and category.emoji and category.emoji ~= "" and category.emoji)
+                              or "•"
+                local iconSize = 14
+                local iconW = 0
+                if Susano and Susano.GetTextWidth then
+                    iconW = Susano.GetTextWidth(iconChar, iconSize * scale)
+                else
+                    iconW = string.len(iconChar) * 8 * scale
+                end
+                local iconTextX = iconBoxX + (iconBoxSize / 2) - (iconW / 2)
+                local iconTextY = iconBoxY + (iconBoxSize / 2) - (7 * scale)
+                Menu.DrawText(iconTextX, iconTextY, iconChar, iconSize, 1.0, 1.0, 1.0, 1.0)
             end
-            local label = prefix .. (category.name or "")
+
+            local textX = iconBoxX + iconBoxSize + (8 * scale)
+            local textY = itemY + itemHeight / 2 - 8
+            local label = category.name or ""
             Menu.DrawText(textX, textY, label, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
             local chevronX = x + width - 22
