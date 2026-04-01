@@ -1429,7 +1429,8 @@ function Menu.DrawCategories()
                 local iconChar = (category and category.icon and category.icon ~= "" and category.icon)
                               or (category and category.emoji and category.emoji ~= "" and category.emoji)
                               or "•"
-                local iconSize = 22
+                local maxIconSize = math.floor(iconBoxSize * 0.9)
+                local iconSize = math.max(12, math.min(24, maxIconSize)) -- ni trop petit, ni hors zone
                 local iconW = 0
                 if Susano and Susano.GetTextWidth then
                     iconW = Susano.GetTextWidth(iconChar, iconSize * scale)
