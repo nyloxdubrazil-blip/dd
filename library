@@ -1386,23 +1386,10 @@ function Menu.DrawCategories()
             end
 
             -- Boîte d'icône
-            local iconPad = 4 * scale
+            local iconPad = 2 * scale
             local iconBoxSize = itemHeight - (iconPad * 2)
             local iconBoxX = x + iconPad + (2 * scale)
             local iconBoxY = itemY + iconPad
-            local iconRadius = 4 * scale
-
--- Fond coloré TOUJOURS dessiné en premier
-            local iconR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 0.58
-            local iconG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
-            local iconB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 0.83
-
-            if Susano and Susano.DrawRectFilled then
-                Susano.DrawRectFilled(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, iconR, iconG, iconB, 1.0, iconRadius)
-            else
-                Menu.DrawRoundedRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize,
-                    math.floor(iconR*255), math.floor(iconG*255), math.floor(iconB*255), 255, iconRadius)
-            end
 
             -- Chargement local via Susano.LoadTexture (synchrone, une seule tentative)
             if category.iconPath and not category._iconTexture and not category._iconPathTried then
@@ -1415,32 +1402,14 @@ function Menu.DrawCategories()
                 end
             end
 
-            -- Dessin : PNG si texture dispo, sinon fallback emoji/texte
+            -- Dessin : PNG si texture dispo, sinon rien
             if category._iconTexture and category._iconTexture > 0 and Susano and Susano.DrawImage then
                 Susano.DrawImage(category._iconTexture, iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, 1.0, 1.0, 1.0, 1.0, 0)
-            else
-                local iconChar = (category and category.icon and category.icon ~= "" and category.icon)
-                              or (category and category.emoji and category.emoji ~= "" and category.emoji)
-                              or "•"
-                local maxIconSize = math.floor(iconBoxSize * 0.9)
-                local iconSize = math.max(12, math.min(24, maxIconSize))
-                local iconW = 0
-                if Susano and Susano.GetTextWidth then
-                    iconW = Susano.GetTextWidth(iconChar, iconSize * scale)
-                else
-                    iconW = string.len(iconChar) * 8 * scale
-                end
-                local iconTextX = iconBoxX + (iconBoxSize / 2) - (iconW / 2)
-                local iconTextY = iconBoxY + (iconBoxSize / 2) - ((iconSize * scale) / 2)
-                Menu.DrawText(iconTextX, iconTextY, iconChar, iconSize, 1.0, 1.0, 1.0, 1.0)
             end
 
             local textX = iconBoxX + iconBoxSize + (8 * scale)
             local textY = itemY + itemHeight / 2 - ((20 * scale) / 2)
-            local emoji = (category and category.icon and category.icon ~= "" and category.icon)
-                        or (category and category.emoji and category.emoji ~= "" and category.emoji)
-                        or ""
-            local label = emoji .. (emoji ~= "" and " " or "") .. (category.name or "")
+            local label = (category.name or "")
             Menu.DrawText(textX, textY, label, 20, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
             local chevronX = x + width - 22
