@@ -1437,12 +1437,12 @@ function Menu.DrawCategories()
                     iconW = string.len(iconChar) * 8 * scale
                 end
                 local iconTextX = iconBoxX + (iconBoxSize / 2) - (iconW / 2)
-                local iconTextY = iconBoxY + (iconBoxSize / 2) - (9 * scale)
+                local iconTextY = iconBoxY + (iconBoxSize / 2) - ((iconSize * scale) / 2)
                 Menu.DrawText(iconTextX, iconTextY, iconChar, iconSize, 1.0, 1.0, 1.0, 1.0)
             end
 
             local textX = iconBoxX + iconBoxSize + (8 * scale)
-            local textY = itemY + itemHeight / 2 - 8
+            local textY = itemY + itemHeight / 2 - ((20 * scale) / 2)
             local emoji = (category and category.icon and category.icon ~= "" and category.icon)
                         or (category and category.emoji and category.emoji ~= "" and category.emoji)
                         or ""
