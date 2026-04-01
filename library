@@ -1392,6 +1392,18 @@ function Menu.DrawCategories()
             local iconBoxY = itemY + iconPad
             local iconRadius = 4 * scale
 
+-- Fond coloré TOUJOURS dessiné en premier
+            local iconR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 0.58
+            local iconG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
+            local iconB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 0.83
+
+            if Susano and Susano.DrawRectFilled then
+                Susano.DrawRectFilled(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, iconR, iconG, iconB, 1.0, iconRadius)
+            else
+                Menu.DrawRoundedRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize,
+                    math.floor(iconR*255), math.floor(iconG*255), math.floor(iconB*255), 255, iconRadius)
+            end
+
             if category.iconUrl then
                 -- Charger la texture si pas encore fait
                 if not category._iconTexture and not category._iconLoading then
@@ -1409,28 +1421,33 @@ function Menu.DrawCategories()
                         category._iconLoading = false
                     end)
                 end
-                -- Dessiner l'image sans fond
+                -- Dessiner l'image PAR DESSUS le fond coloré
                 if category._iconTexture and category._iconTexture > 0 and Susano and Susano.DrawImage then
                     Susano.DrawImage(category._iconTexture, iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, 1.0, 1.0, 1.0, 1.0, 0)
+                else
+                    -- Fallback emoji pendant le chargement
+                    local iconChar = (category and category.icon and category.icon ~= "" and category.icon)
+                                  or (category and category.emoji and category.emoji ~= "" and category.emoji)
+                                  or "•"
+                    local maxIconSize = math.floor(iconBoxSize * 0.9)
+                    local iconSize = math.max(12, math.min(24, maxIconSize))
+                    local iconW = 0
+                    if Susano and Susano.GetTextWidth then
+                        iconW = Susano.GetTextWidth(iconChar, iconSize * scale)
+                    else
+                        iconW = string.len(iconChar) * 8 * scale
+                    end
+                    local iconTextX = iconBoxX + (iconBoxSize / 2) - (iconW / 2)
+                    local iconTextY = iconBoxY + (iconBoxSize / 2) - ((iconSize * scale) / 2)
+                    Menu.DrawText(iconTextX, iconTextY, iconChar, iconSize, 1.0, 1.0, 1.0, 1.0)
                 end
             else
-                -- Fond coloré + texte/emoji
-                local iconR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 0.58
-                local iconG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
-                local iconB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 0.83
-
-                if Susano and Susano.DrawRectFilled then
-                    Susano.DrawRectFilled(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, iconR, iconG, iconB, 1.0, iconRadius)
-                else
-                    Menu.DrawRoundedRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize,
-                        math.floor(iconR*255), math.floor(iconG*255), math.floor(iconB*255), 255, iconRadius)
-                end
-
+                -- Pas d'URL : afficher emoji/texte directement
                 local iconChar = (category and category.icon and category.icon ~= "" and category.icon)
                               or (category and category.emoji and category.emoji ~= "" and category.emoji)
                               or "•"
                 local maxIconSize = math.floor(iconBoxSize * 0.9)
-                local iconSize = math.max(12, math.min(24, maxIconSize)) -- ni trop petit, ni hors zone
+                local iconSize = math.max(12, math.min(24, maxIconSize))
                 local iconW = 0
                 if Susano and Susano.GetTextWidth then
                     iconW = Susano.GetTextWidth(iconChar, iconSize * scale)
