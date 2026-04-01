@@ -1385,87 +1385,9 @@ function Menu.DrawCategories()
                 Menu.DrawRect(selectorX, drawY, 3, itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
             end
 
-            -- Boîte d'icône
-            local iconPad = 4 * scale
-            local iconBoxSize = itemHeight - (iconPad * 2)
-            local iconBoxX = x + iconPad + (2 * scale)
-            local iconBoxY = itemY + iconPad
-            local iconRadius = 4 * scale
-
--- Fond coloré TOUJOURS dessiné en premier
-            local iconR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 0.58
-            local iconG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
-            local iconB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 0.83
-
-            if Susano and Susano.DrawRectFilled then
-                Susano.DrawRectFilled(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, iconR, iconG, iconB, 1.0, iconRadius)
-            else
-                Menu.DrawRoundedRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize,
-                    math.floor(iconR*255), math.floor(iconG*255), math.floor(iconB*255), 255, iconRadius)
-            end
-
-            if category.iconUrl then
-                -- Charger la texture si pas encore fait
-                if not category._iconTexture and not category._iconLoading then
-                    category._iconLoading = true
-                    CreateThread(function()
-                        local ok, result = pcall(function()
-                            local status, body = Susano.HttpGet(category.iconUrl)
-                            if status == 200 and body and #body > 0 then
-                                local tex, w, h = Susano.LoadTextureFromBuffer(body)
-                                if tex and tex ~= 0 then
-                                    category._iconTexture = tex
-                                end
-                            end
-                        end)
-                        category._iconLoading = false
-                    end)
-                end
-                -- Dessiner l'image PAR DESSUS le fond coloré
-                if category._iconTexture and category._iconTexture > 0 and Susano and Susano.DrawImage then
-                    Susano.DrawImage(category._iconTexture, iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, 1.0, 1.0, 1.0, 1.0, 0)
-                else
-                    -- Fallback emoji pendant le chargement
-                    local iconChar = (category and category.icon and category.icon ~= "" and category.icon)
-                                  or (category and category.emoji and category.emoji ~= "" and category.emoji)
-                                  or "•"
-                    local maxIconSize = math.floor(iconBoxSize * 0.9)
-                    local iconSize = math.max(12, math.min(24, maxIconSize))
-                    local iconW = 0
-                    if Susano and Susano.GetTextWidth then
-                        iconW = Susano.GetTextWidth(iconChar, iconSize * scale)
-                    else
-                        iconW = string.len(iconChar) * 8 * scale
-                    end
-                    local iconTextX = iconBoxX + (iconBoxSize / 2) - (iconW / 2)
-                    local iconTextY = iconBoxY + (iconBoxSize / 2) - ((iconSize * scale) / 2)
-                    Menu.DrawText(iconTextX, iconTextY, iconChar, iconSize, 1.0, 1.0, 1.0, 1.0)
-                end
-            else
-                -- Pas d'URL : afficher emoji/texte directement
-                local iconChar = (category and category.icon and category.icon ~= "" and category.icon)
-                              or (category and category.emoji and category.emoji ~= "" and category.emoji)
-                              or "•"
-                local maxIconSize = math.floor(iconBoxSize * 0.9)
-                local iconSize = math.max(12, math.min(24, maxIconSize))
-                local iconW = 0
-                if Susano and Susano.GetTextWidth then
-                    iconW = Susano.GetTextWidth(iconChar, iconSize * scale)
-                else
-                    iconW = string.len(iconChar) * 8 * scale
-                end
-                local iconTextX = iconBoxX + (iconBoxSize / 2) - (iconW / 2)
-                local iconTextY = iconBoxY + (iconBoxSize / 2) - ((iconSize * scale) / 2)
-                Menu.DrawText(iconTextX, iconTextY, iconChar, iconSize, 1.0, 1.0, 1.0, 1.0)
-            end
-
-            local textX = iconBoxX + iconBoxSize + (8 * scale)
-            local textY = itemY + itemHeight / 2 - ((20 * scale) / 2)
-            local emoji = (category and category.icon and category.icon ~= "" and category.icon)
-                        or (category and category.emoji and category.emoji ~= "" and category.emoji)
-                        or ""
-            local label = emoji .. (emoji ~= "" and " " or "") .. (category.name or "")
-            Menu.DrawText(textX, textY, label, 20, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
+            local textX = x + 16
+            local textY = itemY + itemHeight / 2 - 8
+            Menu.DrawText(textX, textY, category.name, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
             local chevronX = x + width - 22
             Menu.DrawText(chevronX, textY, ">", 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
@@ -2025,19 +1947,13 @@ function Menu.DrawBackground()
     local menuBarH = scaledPos.mainMenuHeight
     local spacing = scaledPos.mainMenuSpacing
     local itemH = scaledPos.itemHeight
-
-    -- Coins supérieurs arrondis (gauche + droite)
-    local topRadius = 10
-    local topHeight = headerH + menuBarH
-    if Susano and Susano.DrawRectFilled then
-        Susano.DrawRectFilled(x, startY, width + 1, topHeight, 0.0, 0.0, 0.0, 1.0, topRadius)
-    else
-        Menu.DrawTopRoundedRect(x, startY, width + 1, topHeight, 0, 0, 0, 255, topRadius)
-    end
-
-    local itemsY = startY + headerH + menuBarH + spacing
+    
+    local itemsY = 0
     local itemsH = 0
+    
     if Menu.OpenedCategory then
+        itemsY = startY + headerH + menuBarH + spacing
+        
         local category = Menu.Categories[Menu.OpenedCategory]
         if category and category.hasTabs and category.tabs then
             local currentTab = category.tabs[Menu.CurrentTab]
@@ -2049,12 +1965,14 @@ function Menu.DrawBackground()
             end
         end
     else
+        itemsY = startY + headerH + menuBarH + spacing
+        
         local maxVisible = Menu.ItemsPerPage
         local totalCategories = #Menu.Categories - 1
         local visibleCategories = math.min(maxVisible, totalCategories)
         itemsH = visibleCategories * itemH
     end
-
+    
     local itemsEndY = itemsY + itemsH
     
     -- Calculer la position de la barre Main Menu
