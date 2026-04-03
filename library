@@ -71,13 +71,13 @@ end
 
 Menu.Banner = {
     enabled = true,
-    imageUrl = "https://imgur.com/wHkcFDq.png",
+    imageUrl = "https://i.imgur.com/3n9wVhm.png",
     height = 100
 }
 
 Menu.BImage = {
     enabled = true,
-    imageUrl = "https://imgur.com/BATwEXw.png",
+    imageUrl = "https://i.imgur.com/iaqV89r.png",
     size = 20  -- Taille en pixels
 }
 
@@ -212,7 +212,7 @@ function Menu.ApplyTheme(themeName)
     elseif themeLower == "gray" then
         Menu.Colors.HeaderPink = { r = 128, g = 128, b = 128 }
         Menu.Colors.SelectedBg = { r = 128, g = 128, b = 128 }
-        Menu.Banner.imageUrl = "https://imgur.com/a/cp053UW.png"
+        Menu.Banner.imageUrl = "https://i.imgur.com/fxUb5CO.png"
         Menu.CurrentTheme = "Gray"
     elseif themeLower == "pink" then
         Menu.Colors.HeaderPink = { r = 255, g = 20, b = 147 }
