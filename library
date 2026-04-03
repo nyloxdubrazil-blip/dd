@@ -1403,7 +1403,12 @@ function Menu.DrawCategories()
 
             -- Dessin : PNG si texture dispo, sinon rien
             if category._iconTexture and category._iconTexture > 0 and Susano and Susano.DrawImage then
-                Susano.DrawImage(category._iconTexture, iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, 1.0, 1.0, 1.0, 1.0, 0)
+                local iconPad = math.floor(3 * scale)
+                local iconRenderX = iconBoxX + iconPad
+                local iconRenderY = iconBoxY + iconPad
+                local iconRenderSize = iconBoxSize - (iconPad * 2)
+                local iconRadius = math.max(3, math.floor(iconRenderSize * 0.18))
+                Susano.DrawImage(category._iconTexture, iconRenderX, iconRenderY, iconRenderSize, iconRenderSize, 1.0, 1.0, 1.0, 1.0, iconRadius)
             end
 
             local textX = iconBoxX + iconBoxSize + (8 * scale)
