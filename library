@@ -71,13 +71,13 @@ end
 
 Menu.Banner = {
     enabled = true,
-    imageUrl = "https://imgur.com/a/cp053UW",
+    imageUrl = "https://imgur.com/a/cp053UW.png",
     height = 100
 }
 
 Menu.BImage = {
     enabled = true,
-    imageUrl = "https://imgur.com/a/y503nUu",
+    imageUrl = "https://imgur.com/a/y503nUu.png",
     size = 20  -- Taille en pixels
 }
 
@@ -212,7 +212,7 @@ function Menu.ApplyTheme(themeName)
     elseif themeLower == "gray" then
         Menu.Colors.HeaderPink = { r = 128, g = 128, b = 128 }
         Menu.Colors.SelectedBg = { r = 128, g = 128, b = 128 }
-        Menu.Banner.imageUrl = "https://imgur.com/a/cp053UW"
+        Menu.Banner.imageUrl = "https://imgur.com/a/cp053UW.png"
         Menu.CurrentTheme = "Gray"
     elseif themeLower == "pink" then
         Menu.Colors.HeaderPink = { r = 255, g = 20, b = 147 }
@@ -1386,10 +1386,9 @@ function Menu.DrawCategories()
             end
 
             -- Boîte d'icône
-            local iconPad = 2 * scale
-            local iconBoxSize = itemHeight - (iconPad * 2)
-            local iconBoxX = x + iconPad + (2 * scale)
-            local iconBoxY = itemY + iconPad
+            local iconBoxSize = itemHeight
+            local iconBoxX = x + (2 * scale)
+            local iconBoxY = itemY
 
             -- Chargement local via Susano.LoadTexture (synchrone, une seule tentative)
             if category.iconPath and not category._iconTexture and not category._iconPathTried then
