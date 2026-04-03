@@ -1407,8 +1407,14 @@ function Menu.DrawCategories()
                 local iconRenderX = iconBoxX + iconPad
                 local iconRenderY = iconBoxY + iconPad
                 local iconRenderSize = iconBoxSize - (iconPad * 2)
-                local iconRadius = math.max(3, math.floor(iconRenderSize * 0.18))
-                Susano.DrawImage(category._iconTexture, iconRenderX, iconRenderY, iconRenderSize, iconRenderSize, 1.0, 1.0, 1.0, 1.0, iconRadius)
+                if iconRenderSize > 6 then
+                    Susano.DrawImage(category._iconTexture, iconRenderX, iconRenderY, iconRenderSize, iconRenderSize, 1.0, 1.0, 1.0, 1.0, 0)
+                    -- Masquer le point indicateur du coin inférieur droit
+                    local dotSize = math.max(4, math.floor(6 * scale))
+                    local dotX = iconRenderX + iconRenderSize - dotSize
+                    local dotY = iconRenderY + iconRenderSize - dotSize
+                    Menu.DrawRect(dotX, dotY, dotSize + 1, dotSize + 1, 0, 0, 0, 255)
+                end
             end
 
             local textX = iconBoxX + iconBoxSize + (8 * scale)
