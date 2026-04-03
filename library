@@ -71,13 +71,13 @@ end
 
 Menu.Banner = {
     enabled = true,
-    imageUrl = "https://imgur.com/a/cp053UW.png",
+    imageUrl = "https://imgur.com/wHkcFDq.png",
     height = 100
 }
 
 Menu.BImage = {
     enabled = true,
-    imageUrl = "https://imgur.com/a/y503nUu.png",
+    imageUrl = "https://imgur.com/BATwEXw.png",
     size = 20  -- Taille en pixels
 }
 
@@ -217,7 +217,7 @@ function Menu.ApplyTheme(themeName)
     elseif themeLower == "pink" then
         Menu.Colors.HeaderPink = { r = 255, g = 20, b = 147 }
         Menu.Colors.SelectedBg = { r = 255, g = 20, b = 147 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/JiHLgzz.png"
+        Menu.Banner.imageUrl = "https://imgur.com/wHkcFDq.png"
         Menu.CurrentTheme = "pink"
     elseif themeLower == "blue" then
         Menu.Colors.HeaderPink = { r = 0, g = 150, b = 255 }
@@ -1407,13 +1407,13 @@ function Menu.DrawCategories()
                 local iconRenderX = iconBoxX + iconPad
                 local iconRenderY = iconBoxY + iconPad
                 local iconRenderSize = iconBoxSize - (iconPad * 2)
-                if iconRenderSize > 6 then
-                    Susano.DrawImage(category._iconTexture, iconRenderX, iconRenderY, iconRenderSize, iconRenderSize, 1.0, 1.0, 1.0, 1.0, 0)
-                    -- Masquer le point indicateur du coin inférieur droit
-                    local dotSize = math.max(4, math.floor(6 * scale))
-                    local dotX = iconRenderX + iconRenderSize - dotSize
-                    local dotY = iconRenderY + iconRenderSize - dotSize
-                    Menu.DrawRect(dotX, dotY, dotSize + 1, dotSize + 1, 0, 0, 0, 255)
+                if iconRenderSize > 4 then
+                    local ok = pcall(Susano.DrawImage, category._iconTexture, iconRenderX, iconRenderY, iconRenderSize, iconRenderSize, 1.0, 1.0, 1.0, 1.0, 0)
+                    if not ok then
+                        -- Texture invalide (reset environnement), forcer le rechargement
+                        category._iconTexture = nil
+                        category._iconLoadedOnce = nil
+                    end
                 end
             end
 
@@ -3153,16 +3153,19 @@ function Menu.LoadCategoryIcon(category)
     if not category or not category.iconUrl or category.iconUrl == "" then return end
     if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
     if category._iconTexture and category._iconTexture > 0 then return end
+    if category._iconLoading then return end
+    category._iconLoading = true
     CreateThread(function()
-        local ok = pcall(function()
+        pcall(function()
             local status, body = Susano.HttpGet(category.iconUrl)
             if status == 200 and body and #body > 0 then
-                local tex, w, h = Susano.LoadTextureFromBuffer(body)
-                if tex and tex ~= 0 then
+                local ok, tex = pcall(Susano.LoadTextureFromBuffer, body)
+                if ok and tex and tex ~= 0 then
                     category._iconTexture = tex
                 end
             end
         end)
+        category._iconLoading = false
     end)
 end
 
