@@ -2171,6 +2171,7 @@ function Menu.DrawBackground()
     end
 end
 
+
 function Menu.Render()
     if Menu.TopLevelTabs and not Menu.Categories then
         Menu.UpdateCategoriesFromTopTab()
@@ -2204,18 +2205,6 @@ function Menu.Render()
         Menu.KeybindsInterfaceAlpha = math.max(0.0, Menu.KeybindsInterfaceAlpha - animSpeed)
     end
 
-    -- Ne appeler BeginFrame que si quelque chose doit être rendu
-    local needsRender = Menu.Visible or Menu.ShowKeybinds or Menu.InputOpen
-        or Menu.LoadingBarAlpha > 0 or Menu.KeySelectorAlpha > 0
-        or Menu.KeybindsInterfaceAlpha > 0 or Menu.OnRender
-
-    if not needsRender then
-        if Susano.ResetFrame then
-            Susano.ResetFrame()
-        end
-        return
-    end
-
     Susano.BeginFrame()
 
     if Menu.KeybindsInterfaceAlpha > 0 then
@@ -2228,7 +2217,7 @@ function Menu.Render()
         elseif not Menu.EditorMode and Susano and Susano.EnableOverlay then
             Susano.EnableOverlay(false)
         end
-
+        
         Menu.DrawBackground()
         Menu.DrawHeader()
         Menu.DrawCategories()
@@ -2249,7 +2238,8 @@ function Menu.Render()
 
     if Menu.OnRender then
         local success, err = pcall(Menu.OnRender)
-        if not success then end
+        if not success then
+        end
     end
 
     if Susano.SubmitFrame then
