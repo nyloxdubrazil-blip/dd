@@ -1413,6 +1413,12 @@ function Menu.DrawCategories()
                         -- Texture invalide (reset environnement), forcer le rechargement
                         category._iconTexture = nil
                         category._iconLoadedOnce = nil
+                    else
+                        -- Couvrir le logo imgur (coin bas-droite)
+                        local coverSize = math.max(4, math.floor(iconRenderSize * 0.20))
+                        if Susano.DrawRectFilled then
+                            Susano.DrawRectFilled(iconRenderX + iconRenderSize - coverSize, iconRenderY + iconRenderSize - coverSize, coverSize, coverSize, 0.0, 0.0, 0.0, 1.0, 0)
+                        end
                     end
                 end
             end
