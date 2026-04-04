@@ -1414,9 +1414,10 @@ function Menu.DrawCategories()
                         category._iconTexture = nil
                         category._iconLoadedOnce = nil
                     else
-                        -- Couvrir le logo imgur (coin bas-droite)
-                        local coverSize = math.max(4, math.floor(iconRenderSize * 0.20))
-                        if Susano.DrawRectFilled then
+                        -- Couvrir le logo imgur (coin bas-droite) uniquement si fond opaque
+                        local isOpaqueBg = not (Menu._blackBackgroundCached and Menu._blackBackgroundCached.value == false)
+                        if isOpaqueBg and Susano.DrawRectFilled then
+                            local coverSize = math.max(2, math.floor(iconRenderSize * 0.10))
                             Susano.DrawRectFilled(iconRenderX + iconRenderSize - coverSize, iconRenderY + iconRenderSize - coverSize, coverSize, coverSize, 0.0, 0.0, 0.0, 1.0, 0)
                         end
                     end
@@ -3190,7 +3191,10 @@ function Menu.LoadCategoryIcon(category)
     category._iconLoading = true
     CreateThread(function()
         pcall(function()
-            local status, body = Susano.HttpGet(category.iconUrl)
+            local iconUrl = category.iconUrl
+            iconUrl = iconUrl:gsub("https://imgur%.com/", "https://i.imgur.com/")
+            iconUrl = iconUrl:gsub("http://imgur%.com/", "http://i.imgur.com/")
+            local status, body = Susano.HttpGet(iconUrl)
             if status == 200 and body and #body > 0 then
                 local ok, tex = pcall(Susano.LoadTextureFromBuffer, body)
                 if ok and tex and tex ~= 0 then
