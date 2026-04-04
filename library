@@ -2733,18 +2733,16 @@ function Menu.HandleInput()
                 elseif (ePressed == true) or (eDown == true and not eWasDown) then
                     if Menu.CurrentTab < #category.tabs then
                         Menu.CurrentTab = Menu.CurrentTab + 1
-                        local newTab = category.tabs[Menu.CurrentTab]
-                        if newTab and newTab.items then
-                            Menu.CurrentItem = findNextNonSeparator(newTab.items, 0, 1)
-                        else
-                            Menu.CurrentItem = 1
-                        end
-                        Menu.ItemScrollOffset = 0
-                    elseif Menu.TopLevelTabs then
-                         Menu.CurrentTopTab = Menu.CurrentTopTab + 1
-                         if Menu.CurrentTopTab > #Menu.TopLevelTabs then Menu.CurrentTopTab = 1 end
-                         Menu.UpdateCategoriesFromTopTab()
+                    else
+                        Menu.CurrentTab = 1
                     end
+                    local newTab = category.tabs[Menu.CurrentTab]
+                    if newTab and newTab.items then
+                        Menu.CurrentItem = findNextNonSeparator(newTab.items, 0, 1)
+                    else
+                        Menu.CurrentItem = 1
+                    end
+                    Menu.ItemScrollOffset = 0
                 elseif (backPressed == true) or (backDown == true and not backWasDown) then
                     if Menu.TopLevelTabs and Menu.TopLevelTabs[Menu.CurrentTopTab].autoOpen then
                          if Menu.CurrentTopTab > 1 then
