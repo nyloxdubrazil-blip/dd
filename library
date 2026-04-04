@@ -2247,6 +2247,10 @@ function Menu.Render()
 end
 
 Menu.KeyStates = {}
+Menu.KeyHoldTime = {}
+Menu.KeyLastRepeat = {}
+Menu.KeyHoldDelay = 400
+Menu.KeyHoldInterval = 80
 
 function Menu.IsKeyJustPressed(keyCode)
     if not (Susano and Susano.GetAsyncKeyState) then
@@ -2271,6 +2275,31 @@ function Menu.IsKeyJustPressed(keyCode)
     end
 
     return false
+end
+
+function Menu.IsKeyRepeat(keyCode, isDown, wasDown, isPressed)
+    local now = GetGameTimer()
+    if isDown == true then
+        if not wasDown or isPressed == true then
+            Menu.KeyHoldTime[keyCode] = now
+            Menu.KeyLastRepeat[keyCode] = now
+            return true
+        else
+            local held = now - (Menu.KeyHoldTime[keyCode] or now)
+            if held >= Menu.KeyHoldDelay then
+                local lastRepeat = Menu.KeyLastRepeat[keyCode] or now
+                if now - lastRepeat >= Menu.KeyHoldInterval then
+                    Menu.KeyLastRepeat[keyCode] = now
+                    return true
+                end
+            end
+            return false
+        end
+    else
+        Menu.KeyHoldTime[keyCode] = nil
+        Menu.KeyLastRepeat[keyCode] = nil
+        return false
+    end
 end
 
 
@@ -2682,9 +2711,9 @@ function Menu.HandleInput()
                     end
                 end
 
-                if (upPressed == true) or (upDown == true and not upWasDown) then
+                if Menu.IsKeyRepeat(0x26, upDown, upWasDown, upPressed) then
                     Menu.CurrentItem = findNextNonSeparator(currentTab.items, Menu.CurrentItem, -1)
-                elseif (downPressed == true) or (downDown == true and not downWasDown) then
+                elseif Menu.IsKeyRepeat(0x28, downDown, downWasDown, downPressed) then
                     Menu.CurrentItem = findNextNonSeparator(currentTab.items, Menu.CurrentItem, 1)
                 elseif (aPressed == true) or (aDown == true and not aWasDown) then
                     if Menu.CurrentTab > 1 then
@@ -2923,12 +2952,12 @@ function Menu.HandleInput()
             if eDown == true then Menu.KeyStates[0x45] = true else Menu.KeyStates[0x45] = false end
             if backDown == true then Menu.KeyStates[0x08] = true else Menu.KeyStates[0x08] = false end
 
-            if (upPressed == true) or (upDown == true and not upWasDown) then
+            if Menu.IsKeyRepeat(0x26, upDown, upWasDown, upPressed) then
                 Menu.CurrentCategory = Menu.CurrentCategory - 1
                 if Menu.CurrentCategory < 2 then
                     Menu.CurrentCategory = #Menu.Categories
                 end
-            elseif (downPressed == true) or (downDown == true and not downWasDown) then
+            elseif Menu.IsKeyRepeat(0x28, downDown, downWasDown, downPressed) then
                 Menu.CurrentCategory = Menu.CurrentCategory + 1
                 if Menu.CurrentCategory > #Menu.Categories then
                     Menu.CurrentCategory = 2
