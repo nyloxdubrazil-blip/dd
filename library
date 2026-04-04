@@ -2757,7 +2757,7 @@ function Menu.HandleInput()
                         Menu.CurrentTab = 1
                         Menu.ItemScrollOffset = 0
                     end
-                elseif (leftPressed == true) or (leftDown == true and not leftWasDown) then
+                elseif Menu.IsKeyRepeat(0x25, leftDown, leftWasDown, leftPressed) then
                     if Menu.CurrentItem > 0 and Menu.CurrentItem <= #currentTab.items then
                         local selectedItem = currentTab.items[Menu.CurrentItem]
                         if selectedItem then
@@ -2827,7 +2827,7 @@ function Menu.HandleInput()
                             end
                         end
                     end
-                elseif (rightPressed == true) or (rightDown == true and not rightWasDown) then
+                elseif Menu.IsKeyRepeat(0x27, rightDown, rightWasDown, rightPressed) then
                     if Menu.CurrentItem > 0 and Menu.CurrentItem <= #currentTab.items then
                         local selectedItem = currentTab.items[Menu.CurrentItem]
                         if selectedItem then
